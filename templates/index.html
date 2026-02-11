@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel Meteorológico</title>
+    <title>Clima Python Pro</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
 </head>
 <body class="{{ weather.description_class if weather and not weather.error else '' }}">
+    
     <div class="container">
         <h1>Painel Meteorológico</h1>
-        
-        <form class="search-box" method="POST" id="search-form">
-            <input type="text" name="city" placeholder="Digite a cidade..." required>
+
+        <form id="search-form" class="search-box" method="POST">
+            <input type="text" name="city" placeholder="Cidade (ex: Maringá, PR)" required>
             <div class="button-group">
                 <button type="submit">Buscar</button>
                 <button type="button" id="geo-btn">📍 Minha Localização</button>
@@ -20,7 +21,7 @@
         </form>
 
         <div id="history" class="history-chips"></div>
-        <div id="loader" style="display:none; margin: 10px 0;">Buscando dados... ☁️</div>
+        <div id="loader" style="display:none; color: white; margin: 10px 0;">Buscando dados... ☁️</div>
 
         {% if weather %}
             {% if weather.error %}
@@ -28,17 +29,19 @@
             {% else %}
                 <div class="weather-current">
                     <h2>{{ weather.city }}</h2>
-                    <img src="http://openweathermap.org/img/wn/{{ weather.icon }}@4x.png" alt="clima">
+                    <img src="http://openweathermap.org/img/wn/{{ weather.icon }}@4x.png" alt="ícone clima">
                     <p class="temp-main">{{ weather.temp|round }}°C</p>
                     <p>{{ weather.description.capitalize() }}</p>
                     <p>💧 {{ weather.humidity }}% | 🌬️ {{ weather.wind }} km/h</p>
                 </div>
 
+                <hr style="margin: 20px 0; opacity: 0.1;">
+
                 <div class="forecast-container">
                     {% for dia in forecast %}
                         <div class="forecast-card">
                             <h4>{{ dia.dia }}</h4>
-                            <img src="http://openweathermap.org/img/wn/{{ dia.icon }}.png" alt="previsão">
+                            <img src="http://openweathermap.org/img/wn/{{ dia.icon }}.png" alt="ícone previsão">
                             <p><strong>{{ dia.temp_max|round }}°</strong> / {{ dia.temp_min|round }}°</p>
                         </div>
                     {% endfor %}
@@ -46,6 +49,7 @@
             {% endif %}
         {% endif %}
     </div>
+
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>

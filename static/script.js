@@ -1,4 +1,3 @@
-// Aguarda o HTML carregar completamente
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('search-form');
     const geoBtn = document.getElementById('geo-btn');
@@ -7,39 +6,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. Lógica do Histórico (Carregar ao iniciar)
     const carregarHistorico = () => {
+        if (!historyDiv) return;
         historyDiv.innerHTML = '';
         const buscas = JSON.parse(localStorage.getItem('buscas') || '[]');
+        
         buscas.forEach(cidade => {
             const btn = document.createElement('button');
             btn.className = 'chip';
             btn.type = 'button';
             btn.innerText = cidade;
-            btn.onclick = () => window.location.href = `/?city=${cidade}`;
+            // Ao clicar no chip, redireciona para a busca daquela cidade
+            btn.onclick = () => window.location.href = `/?city=${encodeURIComponent(cidade)}`;
             historyDiv.appendChild(btn);
         });
     };
+
+    const salvarBusca = (cidade) => {
+        if (!cidade || cidade.trim() === "") return;
+        let buscas = JSON.parse(localStorage.getItem('buscas') || '[]');
+        // Remove se já existir para colocar no topo
+        buscas = buscas.filter(item => item.toLowerCase() !== cidade.toLowerCase());
+        buscas.unshift(cidade);
+        // Mantém apenas as 3 últimas
+        localStorage.setItem('buscas', JSON.stringify(buscas.slice(0, 3)));
+    };
+
+    // Inicializa o histórico visual
     carregarHistorico();
 
-    function salvarBusca(cidade) {
-        if (!cidade) return;
-        let buscas = JSON.parse(localStorage.getItem('buscas') || '[]');
-        if (!buscas.includes(cidade)) {
-            buscas.unshift(cidade);
-            localStorage.setItem('buscas', JSON.stringify(buscas.slice(0, 3)));
-        }
-    }
-
-    // 2. Envio do Formulário
+    // 2. Envio do Formulário Manual
     if (form) {
         form.addEventListener('submit', function(e) {
             const cityInput = this.querySelector('input[name="city"]');
             const submitBtn = this.querySelector('button[type="submit"]');
             
-            salvarBusca(cityInput.value);
+            if (cityInput.value) {
+                salvarBusca(cityInput.value);
+            }
             
-            // Visual de carregamento
-            submitBtn.innerHTML = 'Buscando...';
-            submitBtn.disabled = true;
+            // Feedback visual de carregamento
+            if (submitBtn) {
+                submitBtn.innerHTML = 'Buscando...';
+                submitBtn.disabled = true;
+            }
             if (loader) loader.style.display = 'block';
             
             const containerClima = document.querySelector('.weather-current');
@@ -51,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (geoBtn) {
         geoBtn.addEventListener('click', () => {
             if (!navigator.geolocation) {
-                alert("Seu navegador não suporta geolocalização.");
+                alert("O seu navegador não suporta geolocalização.");
                 return;
             }
 
@@ -61,32 +70,50 @@ document.addEventListener('DOMContentLoaded', () => {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const { latitude, longitude } = position.coords;
+                    
                     fetch('/coords', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({lat: latitude, lon: longitude})
                     })
-                    .then(res => res.json())
+                    .then(res => {
+                        if (!res.ok) throw new Error("Erro no servidor");
+                        return res.json();
+                    })
                     .then(data => {
                         if (data.city) {
-                            window.location.href = `/?city=${data.city}`;
+                            // Salva a cidade encontrada via GPS no histórico e redireciona
+                            salvarBusca(data.city);
+                            window.location.href = `/?city=${encodeURIComponent(data.city)}`;
                         } else {
-                            alert("Cidade não encontrada por coordenadas.");
-                            geoBtn.disabled = false;
-                            geoBtn.innerHTML = '📍 Minha Localização';
+                            throw new Error("Cidade não encontrada");
                         }
                     })
-                    .catch(() => {
-                        alert("Erro ao conectar com o servidor.");
+                    .catch(err => {
+                        alert("Erro ao obter cidade: " + err.message);
                         geoBtn.disabled = false;
+                        geoBtn.innerHTML = '📍 Minha Localização';
                     });
                 },
                 (error) => {
-                    alert("Erro ao obter localização. Verifique se o GPS está ativo e se você permitiu o acesso.");
+                    let msg = "Erro ao obter localização.";
+                    if (error.code === 1) msg = "Por favor, permita o acesso à localização no seu navegador.";
+                    alert(msg);
                     geoBtn.disabled = false;
                     geoBtn.innerHTML = '📍 Minha Localização';
                 }
             );
         });
+    }
+
+    // 4. Mudança Dinâmica de Cor via Temperatura (Opcional, se não usar as classes do Python)
+    const tempElement = document.querySelector('.temp-main');
+    if (tempElement) {
+        const temp = parseInt(tempElement.innerText);
+        if (temp > 30) {
+            document.body.classList.add('quente');
+        } else if (temp < 15) {
+            document.body.classList.add('frio');
+        }
     }
 });

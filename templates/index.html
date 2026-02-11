@@ -3,47 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clima Python Pro</title>
+    <title>Painel Meteorológico</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
-   <div class="container">
-    <h1>Painel meteorológico</h1>
-    
-    <form class="search-box" method="POST">
-        <input type="text" name="city" placeholder="Cidade (ex: London ou Maringá, PR)" required>
-        <button type="submit">Buscar</button>
-    </form>
-
-    {% if weather %}
-        {% if weather.error %}
-            <p class="error">{{ weather.error }}</p>
-        {% else %}
-            <div class="weather-current">
-                <h2>{{ weather.city }}</h2>
-                <p>Agora</p>
-                <img src="http://openweathermap.org/img/wn/{{ weather.icon }}@4x.png">
-                <p class="temp-main">{{ weather.temp|round }}°C</p>
-                <p>{{ weather.description.capitalize() }}</p>
-                <p>💧 Umidade: {{ weather.humidity }}% | 🌬️ Vento: {{ weather.wind }} km/h</p>
+<body class="{{ weather.description_class if weather and not weather.error else '' }}">
+    <div class="container">
+        <h1>Painel Meteorológico</h1>
+        
+        <form class="search-box" method="POST" id="search-form">
+            <input type="text" name="city" placeholder="Digite a cidade..." required>
+            <div class="button-group">
+                <button type="submit">Buscar</button>
+                <button type="button" id="geo-btn">📍 Minha Localização</button>
             </div>
+        </form>
 
-            <hr style="margin: 20px 0; opacity: 0.2;">
+        <div id="history" class="history-chips"></div>
+        <div id="loader" style="display:none; margin: 10px 0;">Buscando dados... ☁️</div>
 
-            <div class="forecast-container">
-                {% for dia in forecast %}
-                    <div class="forecast-card">
-                        <h4>{{ dia.dia }}</h4>
-                        <img src="http://openweathermap.org/img/wn/{{ dia.icon }}.png">
-                        <p><strong>{{ dia.temp_max|round }}°</strong> / {{ dia.temp_min|round }}°</p>
-                        <small>{{ dia.desc }}</small>
-                    </div>
-                {% endfor %}
-            </div>
+        {% if weather %}
+            {% if weather.error %}
+                <p class="error" style="color: #ff8a8a;">{{ weather.error }}</p>
+            {% else %}
+                <div class="weather-current">
+                    <h2>{{ weather.city }}</h2>
+                    <img src="http://openweathermap.org/img/wn/{{ weather.icon }}@4x.png" alt="clima">
+                    <p class="temp-main">{{ weather.temp|round }}°C</p>
+                    <p>{{ weather.description.capitalize() }}</p>
+                    <p>💧 {{ weather.humidity }}% | 🌬️ {{ weather.wind }} km/h</p>
+                </div>
+
+                <div class="forecast-container">
+                    {% for dia in forecast %}
+                        <div class="forecast-card">
+                            <h4>{{ dia.dia }}</h4>
+                            <img src="http://openweathermap.org/img/wn/{{ dia.icon }}.png" alt="previsão">
+                            <p><strong>{{ dia.temp_max|round }}°</strong> / {{ dia.temp_min|round }}°</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
         {% endif %}
-    {% endif %}
-</div>
+    </div>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>

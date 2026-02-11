@@ -3,7 +3,9 @@ import requests
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 
+# Carrega as variáveis do arquivo .env
 load_dotenv()
+
 app = Flask(__name__)
 
 @app.route('/', methods=['GET', 'POST'])
@@ -11,14 +13,15 @@ def index():
     weather_now = None
     forecast_list = []
     
-    # Captura a cidade tanto pelo formulário (POST) quanto pela URL (GET da geolocalização)
+    # Captura a cidade do formulário (POST) ou da URL (GET)
+    # O args.get('city') é fundamental para o redirecionamento da geolocalização
     city = request.form.get('city') or request.args.get('city')
     api_key = os.getenv("API_KEY")
 
     if city:
-        # 1. Busca Clima ATUAL
+        # 1. URL para o clima ATUAL
         url_now = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}&units=metric&lang=pt_br"
-        # 2. Busca PREVISÃO
+        # 2. URL para a PREVISÃO de 5 dias
         url_forecast = f"http://api.openweathermap.org/data/2.5/forecast?q={city}&appid={api_key}&units=metric&lang=pt_br"
         
         try:
@@ -26,7 +29,7 @@ def index():
             res_forecast = requests.get(url_forecast).json()
 
             if res_now.get('cod') == 200:
-                # Dados de AGORA com a classe CSS dinâmica
+                # Monta os dados atuais e cria a classe CSS baseada na descrição
                 weather_now = {
                     'city': res_now['name'],
                     'temp': res_now['main']['temp'],
@@ -37,7 +40,7 @@ def index():
                     'description_class': res_now['weather'][0]['description'].replace(" ", "-").lower()
                 }
                 
-                # Dados dos PRÓXIMOS DIAS
+                # Pega a previsão para os próximos períodos (índices 8 e 16 representam aprox. 24h e 48h)
                 indices = [8, 16]
                 dias_nomes = ["Amanhã", "Depois de Amanhã"]
                 for i, idx in enumerate(indices):
@@ -52,6 +55,7 @@ def index():
                         })
             else:
                 weather_now = {'error': 'Cidade não encontrada.'}
+                
         except Exception as e:
             weather_now = {'error': 'Erro de conexão com a API.'}
 
@@ -59,15 +63,18 @@ def index():
 
 @app.route('/coords', methods=['POST'])
 def coords():
+    """ Rota que recebe latitude e longitude e retorna o nome da cidade """
     data = request.get_json()
     lat = data.get('lat')
     lon = data.get('lon')
     api_key = os.getenv("API_KEY")
     
     url = f"http://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric&lang=pt_br"
+    
     try:
         res = requests.get(url).json()
         if res.get('cod') == 200:
+            # Retornamos apenas o nome para o JS fazer o redirecionamento
             return jsonify({"city": res['name']})
         return jsonify({"error": "Localização não encontrada"}), 400
     except:
